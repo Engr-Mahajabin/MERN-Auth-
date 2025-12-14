@@ -66,6 +66,20 @@ export const registerUser = TryCatch(async (req, res) => {
 
   const { name, email, password } = validation.data;
 
+  const rateLimitKey = `register-rate-limit:${req.ip}:${email}`;
+  if (await redisClient.get(rateLimitKey)) {
+    return res.status(429).json({
+      message: "Too many registration attempts. Please try again later.",
+    });
+  }
+
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    return res.status(400).json({
+      message: "User already exists",
+    });
+  }
+
   // user is saved to database:
   const user = await User.create({
     name,
